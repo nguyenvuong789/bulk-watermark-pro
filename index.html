@@ -1,0 +1,2368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulk Watermark Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Oswald:wght@300;400;600&family=Lato:ital,wght@0,300;0,400;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0D0C09;
+      --surface-0: #111009;
+      --surface-1: #181610;
+      --surface-2: #211E16;
+      --surface-3: #2C2820;
+      --accent: #E8A535;
+      --accent-dim: #996614;
+      --accent-glow: rgba(232,165,53,0.12);
+      --accent-border: rgba(232,165,53,0.28);
+      --text: #F0EAD6;
+      --text-muted: #7A7060;
+      --text-dim: #3E3A30;
+      --success: #5B8A52;
+      --warning: #C27C2A;
+      --danger: #A84040;
+      --border: rgba(240,234,214,0.07);
+      --border-bright: rgba(240,234,214,0.13);
+      --font-ui: 'DM Mono', monospace;
+      --font-display: 'Syne', sans-serif;
+      --sidebar-w: 320px;
+      --header-h: 50px;
+      --thumb-h: 124px;
+      --radius: 4px;
+    }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 12px;
+    }
+
+    /* Grain overlay */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.032;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+    /* ─── DROP OVERLAY ─── */
+    #drop-overlay {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+      z-index: 100;
+      transition: opacity 0.4s ease;
+    }
+    #drop-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .drop-zone {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 520px; max-width: 90vw;
+      padding: 60px 40px;
+      border: 1.5px dashed var(--accent-border);
+      border-radius: 8px;
+      background: var(--surface-1);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      animation: dash-pulse 3s ease-in-out infinite;
+    }
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+      animation: none;
+    }
+    @keyframes dash-pulse {
+      0%, 100% { border-color: rgba(232,165,53,0.25); }
+      50% { border-color: rgba(232,165,53,0.55); }
+    }
+
+    .drop-brand {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 0.4em;
+      color: var(--accent);
+      margin-bottom: 28px;
+      text-transform: uppercase;
+    }
+
+    .drop-icon {
+      width: 64px; height: 64px;
+      border: 1.5px solid var(--accent-border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+      background: var(--surface-2);
+    }
+    .drop-icon svg { opacity: 0.7; }
+
+    .drop-title {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .drop-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .drop-btn-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px;
+      background: var(--accent);
+      color: var(--bg);
+      font-family: var(--font-ui);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.12em;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.15s;
+      text-transform: uppercase;
+    }
+    .drop-btn-label:hover { opacity: 0.85; }
+
+    .drop-formats {
+      margin-top: 20px;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    .loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .loading-state.active { display: flex; }
+    .loading-spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--surface-3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* ─── MAIN APP ─── */
+    #app {
+      display: flex; flex-direction: column;
+      width: 100vw; height: 100vh;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #app.visible { opacity: 1; }
+
+    /* ─── HEADER ─── */
+    #header {
+      height: var(--header-h);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px 0 20px;
+      background: var(--surface-0);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .header-brand {
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .brand-mark {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 3px;
+    }
+    .brand-mark svg { color: var(--bg); }
+    .brand-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      color: var(--text);
+    }
+    .brand-version {
+      font-size: 9px;
+      color: var(--text-muted);
+      padding: 2px 5px;
+      border: 1px solid var(--border-bright);
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+    }
+
+    .header-center {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px;
+    }
+    #img-counter {
+      font-size: 10px;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      background: var(--surface-2);
+      border-radius: 2px;
+      letter-spacing: 0.06em;
+    }
+
+    .header-actions {
+      display: flex; align-items: center; gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .view-toggle {
+      display: flex; border: 1px solid var(--border-bright); border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .view-btn {
+      padding: 5px 11px;
+      background: transparent;
+      border: none; cursor: pointer;
+      color: var(--text-muted);
+      font-family: var(--font-ui); font-size: 10px;
+      letter-spacing: 0.06em;
+      display: flex; align-items: center; gap: 5px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .view-btn.active {
+      background: var(--surface-3);
+      color: var(--text);
+    }
+    .view-btn:hover:not(.active) { background: var(--surface-2); }
+
+    .hdr-btn {
+      padding: 5px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius); cursor: pointer;
+      color: var(--text-muted);
+      font-family: var(--font-ui); font-size: 10px;
+      letter-spacing: 0.06em;
+      display: flex; align-items: center; gap: 5px;
+      transition: all 0.15s;
+    }
+    .hdr-btn:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-bright); }
+    .hdr-btn.active { color: var(--accent); border-color: var(--accent-border); }
+
+    /* ─── MAIN LAYOUT ─── */
+    #main-layout {
+      flex: 1; min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr var(--sidebar-w);
+    }
+
+    /* ─── WORKSPACE ─── */
+    #workspace {
+      display: flex; flex-direction: column;
+      min-height: 0; overflow: hidden;
+      background: var(--surface-0);
+    }
+
+    /* Single View */
+    #single-view {
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    #canvas-wrapper {
+      flex: 1; min-height: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #080807;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #preview-canvas {
+      display: block;
+      max-width: 100%; max-height: 100%;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+
+    /* Empty canvas state */
+    .canvas-placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px;
+      color: var(--text-dim);
+    }
+    .canvas-placeholder-text {
+      font-size: 11px; letter-spacing: 0.08em;
+    }
+
+    /* Thumbnail Strip */
+    #thumbnail-strip {
+      height: var(--thumb-h);
+      display: flex; align-items: center;
+      gap: 6px; padding: 8px 10px;
+      background: var(--surface-0);
+      border-top: 1px solid var(--border);
+      overflow-x: auto; overflow-y: hidden;
+      flex-shrink: 0;
+    }
+
+    .thumbnail {
+      position: relative;
+      height: 100px; flex-shrink: 0;
+      border: 1.5px solid transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .thumbnail canvas { display: block; height: 100%; width: auto; }
+    .thumbnail:hover { border-color: var(--accent-dim); transform: translateY(-2px); }
+    .thumbnail.active { border-color: var(--accent); }
+
+    .thumb-check {
+      position: absolute; bottom: 3px; right: 3px;
+      width: 16px; height: 16px;
+      background: var(--success);
+      border-radius: 50%;
+      display: none; align-items: center; justify-content: center;
+      font-size: 8px; color: #fff;
+      font-weight: 700;
+    }
+    .thumb-check.visible { display: flex; }
+
+    /* Grid View */
+    #grid-view {
+      flex: 1; min-height: 0;
+      overflow-y: auto;
+      padding: 16px;
+      display: none;
+    }
+    #grid-view.active { display: block; }
+
+    #grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 10px;
+    }
+
+    .grid-cell {
+      position: relative;
+      cursor: pointer;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      transition: border-color 0.15s, transform 0.15s;
+      background: var(--surface-1);
+    }
+    .grid-cell:hover { border-color: var(--accent-dim); transform: scale(1.01); }
+    .grid-cell canvas { display: block; width: 100%; height: auto; }
+    .grid-cell-label {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 4px 8px;
+      background: rgba(0,0,0,0.7);
+      font-size: 9px; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      letter-spacing: 0.04em;
+    }
+
+    /* ─── SIDEBAR ─── */
+    #sidebar {
+      display: flex; flex-direction: column;
+      background: var(--surface-1);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      /* No overflow-x:hidden — that creates a stacking context that clips the font dropdown */
+    }
+
+    .sidebar-section {
+      border-bottom: 1px solid var(--border);
+      padding: 13px 14px;
+    }
+
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .section-label {
+      font-size: 9.5px; font-weight: 500;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .reset-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-dim);
+      font-size: 11px;
+      padding: 2px 4px;
+      border-radius: 2px;
+      transition: color 0.15s, background 0.15s;
+      line-height: 1;
+    }
+    .reset-btn:hover { color: var(--accent); background: var(--accent-glow); }
+
+    /* Profile */
+    .profile-row {
+      display: flex; gap: 5px; align-items: center;
+    }
+    select#profile-select {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-ui); font-size: 11px;
+      padding: 6px 8px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    select#profile-select:focus { border-color: var(--accent-border); }
+    select#profile-select option { background: var(--surface-2); }
+
+    .icon-btn {
+      width: 28px; height: 28px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { background: var(--surface-3); color: var(--text); }
+    .icon-btn.star.active { color: var(--accent); border-color: var(--accent-border); }
+    .icon-btn.update.visible { display: flex; }
+    .icon-btn.update { display: none; color: var(--success); border-color: rgba(91,138,82,0.35); }
+    .icon-btn.update:hover { background: rgba(91,138,82,0.1); }
+
+    /* Text input */
+    .text-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-ui); font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+      resize: none;
+    }
+    .text-input:focus { border-color: var(--accent-border); }
+    .text-input::placeholder { color: var(--text-dim); }
+
+    /* Custom font dropdown */
+    .font-dropdown {
+      position: relative;
+    }
+    .font-trigger {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 12px;
+      padding: 7px 10px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: border-color 0.15s;
+      user-select: none;
+    }
+    .font-trigger:hover, .font-trigger.open { border-color: var(--accent-border); }
+    .font-caret { color: var(--text-muted); font-size: 10px; transition: transform 0.2s; }
+    .font-trigger.open .font-caret { transform: rotate(180deg); }
+
+    .font-menu {
+      /* position/size set dynamically by JS (portal: fixed to body) */
+      position: fixed;
+      background: var(--surface-1);
+      border: 1px solid var(--accent-border);
+      border-radius: var(--radius);
+      overflow-y: auto; max-height: 240px;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.75);
+      backdrop-filter: blur(10px);
+    }
+    .font-menu.open { display: block; }
+
+    .font-option {
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text);
+      transition: background 0.12s;
+      border-bottom: 1px solid var(--border);
+    }
+    .font-option:last-child { border-bottom: none; }
+    .font-option:hover { background: var(--surface-3); }
+    .font-option.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+
+    /* Slider rows */
+    .slider-row {
+      display: flex; align-items: center; gap: 7px;
+      margin-bottom: 6px;
+    }
+    .slider-row:last-child { margin-bottom: 0; }
+    .slider-label {
+      font-size: 9px; color: var(--text-muted);
+      width: 12px; flex-shrink: 0;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 3px;
+      background: var(--surface-3);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--surface-2);
+      box-shadow: 0 0 6px rgba(232,165,53,0.35);
+      transition: transform 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    input[type="range"]:focus { background: var(--accent-dim); }
+    input[type="range"]::-moz-range-thumb {
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--surface-2);
+    }
+
+    .num-input {
+      width: 42px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-ui); font-size: 11px;
+      padding: 4px 5px;
+      text-align: center;
+      outline: none;
+      flex-shrink: 0;
+      transition: border-color 0.15s;
+    }
+    .num-input:focus { border-color: var(--accent-border); }
+    /* Remove arrows */
+    .num-input::-webkit-outer-spin-button,
+    .num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .num-input[type="number"] { -moz-appearance: textfield; }
+
+    .unit-label {
+      font-size: 9px; color: var(--text-muted);
+      flex-shrink: 0; letter-spacing: 0.05em;
+    }
+
+    /* Scale mode toggle */
+    .toggle-group {
+      display: flex; gap: 4px;
+      margin-top: 7px;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 5px 6px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-family: var(--font-ui); font-size: 9.5px;
+      cursor: pointer;
+      text-align: center;
+      letter-spacing: 0.04em;
+      transition: all 0.15s;
+    }
+    .toggle-btn:hover { background: var(--surface-3); }
+    .toggle-btn.active {
+      background: var(--accent-glow);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    /* Color picker */
+    .color-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .color-swatch-wrap {
+      position: relative;
+      width: 32px; height: 32px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border-bright);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    input[type="color"] {
+      position: absolute;
+      inset: -4px;
+      width: calc(100% + 8px); height: calc(100% + 8px);
+      border: none; outline: none; cursor: pointer;
+      padding: 0;
+    }
+    .hex-input {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-ui); font-size: 11px;
+      padding: 6px 8px;
+      outline: none;
+      letter-spacing: 0.08em;
+      transition: border-color 0.15s;
+    }
+    .hex-input:focus { border-color: var(--accent-border); }
+
+    /* 9-point position grid */
+    #pos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .pos-cell {
+      aspect-ratio: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: 3px;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .pos-cell:hover { background: var(--surface-3); border-color: var(--accent-dim); }
+    .pos-cell.active {
+      background: var(--accent-glow);
+      border-color: var(--accent);
+    }
+    .pos-cell::after {
+      content: '';
+      position: absolute;
+      width: 5px; height: 5px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: background 0.15s;
+    }
+    .pos-cell.active::after { background: var(--accent); }
+    /* Dot positions */
+    .pos-cell[data-pos="tl"]::after { top: 4px; left: 4px; }
+    .pos-cell[data-pos="tc"]::after { top: 4px; left: 50%; transform: translateX(-50%); }
+    .pos-cell[data-pos="tr"]::after { top: 4px; right: 4px; }
+    .pos-cell[data-pos="ml"]::after { top: 50%; left: 4px; transform: translateY(-50%); }
+    .pos-cell[data-pos="mc"]::after { top: 50%; left: 50%; transform: translate(-50%,-50%); }
+    .pos-cell[data-pos="mr"]::after { top: 50%; right: 4px; transform: translateY(-50%); }
+    .pos-cell[data-pos="bl"]::after { bottom: 4px; left: 4px; }
+    .pos-cell[data-pos="bc"]::after { bottom: 4px; left: 50%; transform: translateX(-50%); }
+    .pos-cell[data-pos="br"]::after { bottom: 4px; right: 4px; }
+
+    /* Offset inputs */
+    .offset-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .offset-row label {
+      display: flex; align-items: center; gap: 5px;
+      flex: 1;
+      font-size: 10px; color: var(--text-muted);
+    }
+    .tiny-input {
+      width: 52px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-ui); font-size: 11px;
+      padding: 4px 6px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .tiny-input:focus { border-color: var(--accent-border); }
+    .tiny-input::-webkit-outer-spin-button,
+    .tiny-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .tiny-input[type="number"] { -moz-appearance: textfield; }
+
+    /* Export section */
+    .export-field { margin-bottom: 8px; }
+    .export-field-label {
+      font-size: 9.5px; color: var(--text-muted);
+      letter-spacing: 0.1em; margin-bottom: 5px;
+    }
+    .pattern-hint {
+      font-size: 9px; color: var(--text-dim);
+      margin-top: 4px; letter-spacing: 0.03em;
+    }
+
+    .export-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: var(--accent);
+      border: none; border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--bg);
+      font-family: var(--font-display);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .export-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .export-btn:active { transform: translateY(0); }
+    .export-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .export-count { font-weight: 400; opacity: 0.75; }
+
+    /* ─── PROGRESS OVERLAY ─── */
+    #progress-overlay {
+      position: fixed; inset: 0;
+      background: rgba(13,12,9,0.88);
+      display: none; align-items: center; justify-content: center;
+      z-index: 200;
+      backdrop-filter: blur(4px);
+    }
+    #progress-overlay.active { display: flex; }
+
+    .progress-box {
+      background: var(--surface-2);
+      border: 1px solid var(--accent-border);
+      border-radius: 8px;
+      padding: 32px 40px;
+      width: 380px; max-width: 90vw;
+      text-align: center;
+    }
+    .progress-title {
+      font-family: var(--font-display);
+      font-size: 14px; font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .progress-subtitle {
+      font-size: 10px; color: var(--text-muted);
+      margin-bottom: 20px; letter-spacing: 0.05em;
+    }
+    .progress-track {
+      width: 100%; height: 3px;
+      background: var(--surface-3);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.2s ease;
+      box-shadow: 0 0 8px rgba(232,165,53,0.5);
+    }
+    .progress-count {
+      font-size: 11px; color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--surface-3);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      padding: 10px 18px;
+      font-size: 11px; color: var(--text);
+      letter-spacing: 0.06em;
+      z-index: 300;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    #toast.success { border-color: rgba(91,138,82,0.4); color: #7EC173; }
+    #toast.warning { border-color: rgba(194,124,42,0.4); color: #C27C2A; }
+    #toast.error { border-color: rgba(168,64,64,0.4); color: #C47070; }
+
+    /* ─── MODAL for profile name ─── */
+    #modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      z-index: 400;
+      backdrop-filter: blur(2px);
+    }
+    #modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--surface-2);
+      border: 1px solid var(--accent-border);
+      border-radius: 6px;
+      padding: 24px 28px;
+      width: 320px;
+    }
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 13px; font-weight: 700;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+    .modal-input {
+      width: 100%;
+      background: var(--surface-3);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-ui); font-size: 12px;
+      padding: 8px 10px;
+      outline: none;
+      margin-bottom: 14px;
+    }
+    .modal-input:focus { border-color: var(--accent-border); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-btn {
+      padding: 7px 16px;
+      border-radius: var(--radius);
+      border: none; cursor: pointer;
+      font-family: var(--font-ui); font-size: 11px;
+      letter-spacing: 0.06em;
+      transition: opacity 0.15s;
+    }
+    .modal-btn.cancel {
+      background: var(--surface-3);
+      color: var(--text-muted);
+      border: 1px solid var(--border-bright);
+    }
+    .modal-btn.confirm {
+      background: var(--accent); color: var(--bg); font-weight: 500;
+    }
+    .modal-btn:hover { opacity: 0.85; }
+
+    /* Sub-groups inside merged config section */
+    .sub-group { margin-bottom: 12px; }
+    .sub-group:last-child { margin-bottom: 0; }
+    .sub-group-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .sub-label {
+      font-size: 9px; color: var(--text-dim);
+      letter-spacing: 0.14em; text-transform: uppercase;
+    }
+
+    /* Rotation presets */
+    .rotation-presets {
+      display: flex; gap: 4px; margin-top: 8px;
+    }
+    .preset-btn {
+      flex: 1;
+      padding: 7px 4px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-family: var(--font-ui); font-size: 9.5px;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      transition: all 0.15s; letter-spacing: 0.04em;
+    }
+    .preset-btn:hover { background: var(--surface-3); color: var(--text); }
+    .preset-btn.active {
+      background: var(--accent-glow);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+    .preset-icon {
+      width: 20px; height: 12px;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0.6;
+    }
+    .preset-btn.active .preset-icon { opacity: 1; }
+
+    /* ─── STAGGER ANIMATION on load ─── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .sidebar-section {
+      opacity: 0;
+      animation: fadeUp 0.35s ease forwards;
+    }
+    .sidebar-section:nth-child(1) { animation-delay: 0.05s; }
+    .sidebar-section:nth-child(2) { animation-delay: 0.10s; }
+    .sidebar-section:nth-child(3) { animation-delay: 0.15s; }
+    .sidebar-section:nth-child(4) { animation-delay: 0.20s; }
+    .sidebar-section:nth-child(5) { animation-delay: 0.25s; }
+    .sidebar-section:nth-child(6) { animation-delay: 0.30s; }
+    .sidebar-section:nth-child(7) { animation-delay: 0.35s; }
+    .sidebar-section:nth-child(8) { animation-delay: 0.40s; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     DROP OVERLAY (Empty State)
+═══════════════════════════════════════════ -->
+<div id="drop-overlay">
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-brand">Bulk Watermark Pro</div>
+
+    <div class="drop-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E8A535" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+    </div>
+
+    <div class="drop-title" id="drop-title-text">Kéo thả thư mục ảnh vào đây</div>
+    <div class="drop-subtitle" id="drop-subtitle-text">Hỗ trợ folder chứa ảnh JPEG, PNG, WebP, GIF, BMP<br>Tất cả xử lý trực tiếp trên trình duyệt — không upload lên máy chủ</div>
+
+    <label class="drop-btn-label" id="drop-btn-visible">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Chọn Thư Mục
+      <input type="file" id="file-input" webkitdirectory multiple style="display:none">
+    </label>
+
+    <div class="drop-formats" style="margin-top:16px">JPEG · PNG · WEBP · GIF · BMP</div>
+
+    <!-- Loading state (replaces content while loading) -->
+    <div class="loading-state" id="loading-state" style="margin-top:16px">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loading-text">Đang nạp ảnh...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header id="header">
+    <div class="header-brand">
+      <div class="brand-mark">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
+      </div>
+      <span class="brand-name">BULK WATERMARK PRO</span>
+      <span class="brand-version">v2.0</span>
+    </div>
+
+    <div class="header-center">
+      <span id="img-counter">0 ảnh</span>
+    </div>
+
+    <div class="header-actions">
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-view-single">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          Single
+        </button>
+        <button class="view-btn" id="btn-view-grid">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Grid
+        </button>
+      </div>
+      <button class="hdr-btn" id="btn-add-more">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Thêm ảnh
+        <input type="file" id="file-input-more" webkitdirectory multiple style="display:none">
+      </button>
+      <button class="hdr-btn" id="btn-sound" title="Shutter sound">
+        <svg id="sound-icon-on" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <svg id="sound-icon-off" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <div id="main-layout">
+
+    <!-- WORKSPACE -->
+    <div id="workspace">
+
+      <!-- Single View -->
+      <div id="single-view">
+        <div id="canvas-wrapper">
+          <canvas id="preview-canvas"></canvas>
+        </div>
+        <div id="thumbnail-strip"></div>
+      </div>
+
+      <!-- Grid View -->
+      <div id="grid-view">
+        <div id="grid-container"></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside id="sidebar">
+
+      <!-- ① PROFILE -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-label">Profile</span>
+        </div>
+        <div class="profile-row">
+          <select id="profile-select">
+            <option value="">— Chọn profile —</option>
+          </select>
+          <button class="icon-btn update" id="btn-update-profile" title="Cập nhật profile hiện tại">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+          <button class="icon-btn star" id="btn-default-profile" title="Đặt làm mặc định">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-save-profile" title="Lưu profile mới">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ② TEXT -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-label">Nội dung</span>
+          <button class="reset-btn" data-group="text" title="Reset">↺</button>
+        </div>
+        <input type="text" class="text-input" id="wm-text" placeholder="© Tên của bạn" maxlength="120">
+      </div>
+
+      <!-- ③ FONT -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-label">Font chữ</span>
+          <button class="reset-btn" data-group="font" title="Reset">↺</button>
+        </div>
+        <div class="font-dropdown" id="font-dropdown">
+          <div class="font-trigger" id="font-trigger">
+            <span id="font-selected-label" style="font-family:'DM Mono'">DM Mono</span>
+            <span class="font-caret">▾</span>
+          </div>
+          <div class="font-menu" id="font-menu"></div>
+        </div>
+      </div>
+
+      <!-- ④ CẤU HÌNH (Size + Opacity + Color merged) -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-label">Cấu hình</span>
+        </div>
+
+        <!-- Size -->
+        <div class="sub-group">
+          <div class="sub-group-header">
+            <span class="sub-label">Kích thước</span>
+            <button class="reset-btn" data-group="size" title="Reset">↺</button>
+          </div>
+          <div class="slider-row">
+            <input type="range" id="wm-size" min="1" max="20" step="0.5" value="5">
+            <input type="number" class="num-input" id="wm-size-num" min="1" max="20" step="0.5" value="5">
+            <span class="unit-label">%</span>
+          </div>
+          <div class="toggle-group">
+            <button class="toggle-btn active" data-mode="longer">Longer Edge</button>
+            <button class="toggle-btn" data-mode="shorter">Shorter Edge</button>
+          </div>
+        </div>
+
+        <!-- Opacity -->
+        <div class="sub-group">
+          <div class="sub-group-header">
+            <span class="sub-label">Độ mờ</span>
+            <button class="reset-btn" data-group="opacity" title="Reset">↺</button>
+          </div>
+          <div class="slider-row" style="margin-bottom:0">
+            <input type="range" id="wm-opacity" min="0" max="100" step="1" value="70">
+            <input type="number" class="num-input" id="wm-opacity-num" min="0" max="100" step="1" value="70">
+            <span class="unit-label">%</span>
+          </div>
+        </div>
+
+        <!-- Color -->
+        <div class="sub-group" style="margin-bottom:0">
+          <div class="sub-group-header">
+            <span class="sub-label">Màu sắc</span>
+            <button class="reset-btn" data-group="color" title="Reset">↺</button>
+          </div>
+          <div class="color-row">
+            <div class="color-swatch-wrap">
+              <input type="color" id="wm-color" value="#ffffff">
+            </div>
+            <input type="text" class="hex-input" id="wm-color-hex" value="#ffffff" maxlength="7" placeholder="#ffffff">
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ GÓC XOAY (Rotation) -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-label">Góc xoay</span>
+          <button class="reset-btn" data-group="rotation" title="Reset">↺</button>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="wm-rotation" min="-180" max="180" step="1" value="0">
+          <input type="number" class="num-input" id="wm-rotation-num" min="-180" max="180" step="1" value="0">
+          <span class="unit-label">°</span>
+        </div>
+        <div class="rotation-presets">
+          <button class="preset-btn active" data-deg="0" title="Nằm ngang (0°)">
+            <span class="preset-icon">
+              <svg width="20" height="12" viewBox="0 0 20 12" fill="none"><line x1="2" y1="6" x2="18" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            0°
+          </button>
+          <button class="preset-btn" data-deg="-45" title="Chéo lên (-45°)">
+            <span class="preset-icon">
+              <svg width="20" height="12" viewBox="0 0 20 12" fill="none"><line x1="2" y1="10" x2="18" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            -45°
+          </button>
+          <button class="preset-btn" data-deg="45" title="Chéo xuống (45°)">
+            <span class="preset-icon">
+              <svg width="20" height="12" viewBox="0 0 20 12" fill="none"><line x1="2" y1="2" x2="18" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            45°
+          </button>
+        </div>
+      </div>
+
+      <!-- ⑥ POSITION -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-label">Vị trí</span>
+          <button class="reset-btn" data-group="position" title="Reset">↺</button>
+        </div>
+        <div id="pos-grid">
+          <div class="pos-cell" data-pos="tl"></div>
+          <div class="pos-cell" data-pos="tc"></div>
+          <div class="pos-cell" data-pos="tr"></div>
+          <div class="pos-cell" data-pos="ml"></div>
+          <div class="pos-cell" data-pos="mc"></div>
+          <div class="pos-cell" data-pos="mr"></div>
+          <div class="pos-cell" data-pos="bl"></div>
+          <div class="pos-cell" data-pos="bc"></div>
+          <div class="pos-cell active" data-pos="br"></div>
+        </div>
+        <div class="offset-row">
+          <label>X offset <input type="number" class="tiny-input" id="offset-x" value="0"> px</label>
+          <label>Y offset <input type="number" class="tiny-input" id="offset-y" value="0"> px</label>
+        </div>
+      </div>
+
+      <!-- ⑧ PADDING -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-label">Lề (Padding)</span>
+          <button class="reset-btn" data-group="padding" title="Reset">↺</button>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">X</span>
+          <input type="range" id="pad-x" min="0" max="10" step="0.5" value="2">
+          <input type="number" class="num-input" id="pad-x-num" min="0" max="10" step="0.5" value="2">
+          <span class="unit-label">%</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Y</span>
+          <input type="range" id="pad-y" min="0" max="10" step="0.5" value="2">
+          <input type="number" class="num-input" id="pad-y-num" min="0" max="10" step="0.5" value="2">
+          <span class="unit-label">%</span>
+        </div>
+      </div>
+
+      <!-- ⑨ EXPORT -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-label">Xuất ảnh</span>
+        </div>
+        <div class="export-field">
+          <div class="export-field-label">Naming Pattern</div>
+          <input type="text" class="text-input" id="export-pattern" value="{original}_wm" placeholder="{original}_wm">
+          <div class="pattern-hint">Tokens: {original} · {date} · {index}</div>
+        </div>
+        <div class="export-field" style="margin-top:8px">
+          <div class="export-field-label">JPEG Quality</div>
+          <div class="slider-row" style="margin-bottom:0">
+            <input type="range" id="export-quality" min="60" max="100" step="1" value="92">
+            <input type="number" class="num-input" id="export-quality-num" min="60" max="100" value="92">
+            <span class="unit-label">%</span>
+          </div>
+        </div>
+        <button class="export-btn" id="btn-export">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Process &amp; Download All
+          <span class="export-count" id="export-count">(0)</span>
+        </button>
+      </div>
+
+    </aside>
+  </div><!-- /main-layout -->
+</div><!-- /app -->
+
+<!-- ─── PROGRESS OVERLAY ─── -->
+<div id="progress-overlay">
+  <div class="progress-box">
+    <div class="progress-title">Đang xử lý...</div>
+    <div class="progress-subtitle" id="progress-subtitle">Vui lòng đợi trong giây lát</div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-count" id="progress-count">0 / 0</div>
+  </div>
+</div>
+
+<!-- ─── TOAST ─── -->
+<div id="toast"></div>
+
+<!-- ─── MODAL (save profile name) ─── -->
+<div id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Lưu Profile mới</div>
+    <input type="text" class="modal-input" id="modal-input" placeholder="Nhập tên profile..." maxlength="40">
+    <div class="modal-actions">
+      <button class="modal-btn cancel" id="modal-cancel">Hủy</button>
+      <button class="modal-btn confirm" id="modal-confirm">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  BULK WATERMARK PRO — Main Application Script
+// ═══════════════════════════════════════════════════════
+
+// ── CONSTANTS ──────────────────────────────────────────
+const SUPPORTED_TYPES = new Set(['image/jpeg','image/jpg','image/png','image/webp','image/gif','image/bmp','image/tiff']);
+const SUPPORTED_EXTS = /\.(jpe?g|png|webp|gif|bmp|tiff?)$/i;
+
+const FONTS = [
+  { family: 'DM Mono',          label: 'DM Mono',           weight: '400' },
+  { family: 'Syne',             label: 'SYNE',              weight: '700' },
+  { family: 'Playfair Display', label: 'Playfair Display',  weight: '400' },
+  { family: 'Bebas Neue',       label: 'BEBAS NEUE',        weight: '400' },
+  { family: 'Dancing Script',   label: 'Dancing Script',    weight: '400' },
+  { family: 'Oswald',           label: 'OSWALD',            weight: '400' },
+  { family: 'Lato',             label: 'Lato',              weight: '400' },
+  { family: 'Merriweather',     label: 'Merriweather',      weight: '400' },
+];
+
+const DEFAULT_SETTINGS = {
+  text: '',
+  font: 'DM Mono',
+  size: 5,
+  scaleMode: 'longer',
+  opacity: 70,
+  color: '#ffffff',
+  position: 'br',
+  padX: 2,
+  padY: 2,
+  offsetX: 0,
+  offsetY: 0,
+  rotation: 0,
+};
+
+const DEFAULT_EXPORT = {
+  pattern: '{original}_wm',
+  quality: 92,
+};
+
+// ── STATE ──────────────────────────────────────────────
+const state = {
+  images: [],          // [{file, bitmap, name, ext, processed}]
+  activeIndex: -1,
+  viewMode: 'single',
+  settings: { ...DEFAULT_SETTINGS },
+  exportSettings: { ...DEFAULT_EXPORT },
+  profiles: [],
+  activeProfileName: null,
+  profileDirty: false,
+  profileBaseSettings: null, // settings when profile was loaded (for reset)
+  shutterSound: true,
+  audioCtx: null,
+};
+
+// ── DOM REFS ───────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const D = {
+  dropOverlay:     $('drop-overlay'),
+  dropZone:        $('drop-zone'),
+  dropTitleText:   $('drop-title-text'),
+  dropSubtitleText: $('drop-subtitle-text'),
+  dropBtnVisible:  $('drop-btn-visible'),
+  loadingState:    $('loading-state'),
+  loadingText:     $('loading-text'),
+  fileInput:       $('file-input'),
+
+  app:             $('app'),
+  imgCounter:      $('img-counter'),
+
+  btnViewSingle:   $('btn-view-single'),
+  btnViewGrid:     $('btn-view-grid'),
+  btnAddMore:      $('btn-add-more'),
+  fileInputMore:   $('file-input-more'),
+  btnSound:        $('btn-sound'),
+  soundIconOn:     $('sound-icon-on'),
+  soundIconOff:    $('sound-icon-off'),
+
+  singleView:      $('single-view'),
+  canvasWrapper:   $('canvas-wrapper'),
+  previewCanvas:   $('preview-canvas'),
+  thumbnailStrip:  $('thumbnail-strip'),
+
+  gridView:        $('grid-view'),
+  gridContainer:   $('grid-container'),
+
+  profileSelect:   $('profile-select'),
+  btnSaveProfile:  $('btn-save-profile'),
+  btnDefaultProfile: $('btn-default-profile'),
+  btnUpdateProfile: $('btn-update-profile'),
+
+  wmText:          $('wm-text'),
+
+  fontTrigger:     $('font-trigger'),
+  fontSelectedLabel: $('font-selected-label'),
+  fontMenu:        $('font-menu'),
+
+  wmSize:          $('wm-size'),
+  wmSizeNum:       $('wm-size-num'),
+
+  wmOpacity:       $('wm-opacity'),
+  wmOpacityNum:    $('wm-opacity-num'),
+
+  wmColor:         $('wm-color'),
+  wmColorHex:      $('wm-color-hex'),
+
+  posGrid:         $('pos-grid'),
+
+  offsetX:         $('offset-x'),
+  offsetY:         $('offset-y'),
+
+  wmRotation:      $('wm-rotation'),
+  wmRotationNum:   $('wm-rotation-num'),
+
+  padX:            $('pad-x'),
+  padXNum:         $('pad-x-num'),
+  padY:            $('pad-y'),
+  padYNum:         $('pad-y-num'),
+
+  exportPattern:   $('export-pattern'),
+  exportQuality:   $('export-quality'),
+  exportQualityNum: $('export-quality-num'),
+  exportCount:     $('export-count'),
+  btnExport:       $('btn-export'),
+
+  progressOverlay: $('progress-overlay'),
+  progressFill:    $('progress-fill'),
+  progressCount:   $('progress-count'),
+  progressSubtitle: $('progress-subtitle'),
+
+  toast:           $('toast'),
+
+  modalOverlay:    $('modal-overlay'),
+  modalInput:      $('modal-input'),
+  modalCancel:     $('modal-cancel'),
+  modalConfirm:    $('modal-confirm'),
+};
+
+// ── WATERMARK COMPOSITOR ───────────────────────────────
+function applyWatermark(canvas, bitmap, settings) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(bitmap, 0, 0, W, H);
+
+  const text = (settings.text || '').trim();
+
+  if (!text) {
+    ctx.save();
+    const ph = Math.round(Math.min(W, H) * 0.028);
+    ctx.font = `${ph}px 'DM Mono', monospace`;
+    ctx.fillStyle = 'rgba(240,234,214,0.22)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Nhập nội dung watermark...', W / 2, H / 2);
+    ctx.restore();
+    return;
+  }
+
+  const refEdge = settings.scaleMode === 'longer'
+    ? Math.max(W, H)
+    : Math.min(W, H);
+  const fontSize = Math.round(refEdge * (settings.size / 100));
+
+  ctx.save();
+  ctx.font = `${fontSize}px '${settings.font}', sans-serif`;
+  ctx.globalAlpha = settings.opacity / 100;
+  ctx.fillStyle = settings.color;
+  // Use middle baseline + center align so the pivot is always the text's visual center
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+
+  const tw = ctx.measureText(text).width;
+  // Approximate visual half-height (most fonts: ascender ≈ 70% of fontSize)
+  const halfH = fontSize * 0.35;
+
+  const padXpx = refEdge * (settings.padX / 100);
+  const padYpx = refEdge * (settings.padY / 100);
+  const pos = settings.position;
+
+  // Pivot X = horizontal center of text
+  let pivotX;
+  if (pos.endsWith('l'))      pivotX = padXpx + tw / 2;
+  else if (pos.endsWith('c')) pivotX = W / 2;
+  else                        pivotX = W - padXpx - tw / 2;
+
+  // Pivot Y = vertical center of text
+  let pivotY;
+  if (pos.startsWith('t'))      pivotY = padYpx + halfH;
+  else if (pos.startsWith('m')) pivotY = H / 2;
+  else                          pivotY = H - padYpx - halfH;
+
+  // Apply manual offsets
+  pivotX += (settings.offsetX || 0);
+  pivotY += (settings.offsetY || 0);
+
+  // Translate to pivot, rotate, draw at origin
+  ctx.translate(pivotX, pivotY);
+  const rotation = settings.rotation || 0;
+  if (rotation !== 0) ctx.rotate(rotation * Math.PI / 180);
+  ctx.fillText(text, 0, 0);
+
+  ctx.restore();
+}
+
+// ── IMAGE LOADING ─────────────────────────────────────
+async function loadFiles(fileList) {
+  const files = Array.from(fileList);
+  const imageFiles = [];
+  const skipped = [];
+
+  for (const f of files) {
+    if (SUPPORTED_TYPES.has(f.type) || SUPPORTED_EXTS.test(f.name)) {
+      imageFiles.push(f);
+    } else if (f.size > 0) {
+      skipped.push(f.name);
+    }
+  }
+
+  if (skipped.length > 0) {
+    showToast(`${skipped.length} file không được hỗ trợ và sẽ bị bỏ qua`, 'warning');
+  }
+
+  if (imageFiles.length === 0) {
+    showToast('Không tìm thấy file ảnh nào!', 'error');
+    hideLoadingState();
+    return;
+  }
+
+  // Sort by name
+  imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+  // Show loading
+  showLoadingState(`Đang nạp ${imageFiles.length} ảnh...`);
+
+  const isFirstBatch = state.images.length === 0;
+
+  for (let i = 0; i < imageFiles.length; i++) {
+    const file = imageFiles[i];
+    D.loadingText.textContent = `Đang nạp ảnh... ${i + 1} / ${imageFiles.length}`;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const match = file.name.match(/^(.+?)(\.[^.]+)?$/);
+      state.images.push({
+        file,
+        bitmap,
+        name: match ? match[1] : file.name,
+        ext: match && match[2] ? match[2] : '.jpg',
+        processed: false,
+      });
+      addThumbnail(state.images.length - 1);
+    } catch (e) {
+      console.warn('Cannot load:', file.name, e);
+    }
+  }
+
+  hideLoadingState();
+
+  if (isFirstBatch) {
+    showApp();
+    setActiveImage(0);
+  }
+
+  updateExportCount();
+  updateImgCounter();
+}
+
+// ── LOADING STATE ─────────────────────────────────────
+function showLoadingState(text) {
+  D.dropBtnVisible.style.display = 'none';
+  D.dropTitleText.textContent = 'Đang nạp ảnh';
+  D.dropSubtitleText.textContent = '';
+  D.loadingState.classList.add('active');
+  D.loadingText.textContent = text || 'Đang nạp ảnh...';
+}
+
+function hideLoadingState() {
+  D.loadingState.classList.remove('active');
+  D.dropBtnVisible.style.display = '';
+  D.dropTitleText.textContent = 'Kéo thả thư mục ảnh vào đây';
+  D.dropSubtitleText.textContent = 'Hỗ trợ folder chứa ảnh JPEG, PNG, WebP, GIF, BMP\nTất cả xử lý trực tiếp trên trình duyệt — không upload lên máy chủ';
+}
+
+function showApp() {
+  D.dropOverlay.classList.add('hidden');
+  D.app.classList.add('visible');
+}
+
+// ── THUMBNAIL ─────────────────────────────────────────
+function addThumbnail(index) {
+  const img = state.images[index];
+  const thumb = document.createElement('div');
+  thumb.className = 'thumbnail';
+  thumb.dataset.index = index;
+
+  const THUMB_H = 100;
+  const scale = THUMB_H / img.bitmap.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.bitmap.width * scale);
+  canvas.height = THUMB_H;
+
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img.bitmap, 0, 0, canvas.width, canvas.height);
+
+  const check = document.createElement('span');
+  check.className = 'thumb-check';
+  check.textContent = '✓';
+
+  thumb.appendChild(canvas);
+  thumb.appendChild(check);
+  thumb.addEventListener('click', () => setActiveImage(index));
+  D.thumbnailStrip.appendChild(thumb);
+}
+
+function updateThumbnailCheck(index) {
+  const thumb = D.thumbnailStrip.children[index];
+  if (!thumb) return;
+  const check = thumb.querySelector('.thumb-check');
+  if (check) check.classList.toggle('visible', state.images[index].processed);
+}
+
+// ── MAIN PREVIEW ──────────────────────────────────────
+function setActiveImage(index) {
+  state.activeIndex = index;
+  // Update thumbnail active states
+  Array.from(D.thumbnailStrip.children).forEach((t, i) => {
+    t.classList.toggle('active', i === index);
+  });
+  // Scroll thumbnail into view
+  const activeThumb = D.thumbnailStrip.children[index];
+  if (activeThumb) {
+    activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+  renderPreview();
+}
+
+function renderPreview() {
+  if (state.activeIndex < 0 || !state.images[state.activeIndex]) return;
+
+  const img = state.images[state.activeIndex];
+  const canvas = D.previewCanvas;
+  const wrapper = D.canvasWrapper;
+
+  const cW = wrapper.clientWidth - 32;
+  const cH = wrapper.clientHeight - 32;
+  const scale = Math.min(cW / img.bitmap.width, cH / img.bitmap.height, 1);
+
+  canvas.width  = Math.round(img.bitmap.width  * scale);
+  canvas.height = Math.round(img.bitmap.height * scale);
+
+  applyWatermark(canvas, img.bitmap, state.settings);
+
+  state.images[state.activeIndex].processed = true;
+  updateThumbnailCheck(state.activeIndex);
+}
+
+// ── GRID VIEW ─────────────────────────────────────────
+function renderGridView() {
+  D.gridContainer.innerHTML = '';
+  const CELL_W = 280;
+
+  state.images.forEach((img, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+
+    const scale = CELL_W / img.bitmap.width;
+    const canvas = document.createElement('canvas');
+    canvas.width = CELL_W;
+    canvas.height = Math.round(img.bitmap.height * scale);
+
+    applyWatermark(canvas, img.bitmap, state.settings);
+
+    const label = document.createElement('div');
+    label.className = 'grid-cell-label';
+    label.textContent = img.name + img.ext;
+
+    cell.appendChild(canvas);
+    cell.appendChild(label);
+    cell.addEventListener('click', () => {
+      switchView('single');
+      setActiveImage(i);
+    });
+
+    D.gridContainer.appendChild(cell);
+  });
+}
+
+// ── VIEW SWITCHING ────────────────────────────────────
+function switchView(mode) {
+  state.viewMode = mode;
+  D.btnViewSingle.classList.toggle('active', mode === 'single');
+  D.btnViewGrid.classList.toggle('active', mode === 'grid');
+  D.singleView.style.display = mode === 'single' ? 'flex' : 'none';
+  D.gridView.classList.toggle('active', mode === 'grid');
+
+  if (mode === 'grid') {
+    renderGridView();
+  } else {
+    renderPreview();
+  }
+}
+
+// ── SETTINGS CHANGE ───────────────────────────────────
+function onSettingsChange() {
+  if (state.viewMode === 'single') {
+    renderPreview();
+  } else {
+    renderGridView();
+  }
+  markProfileDirty();
+}
+
+// ── FONT DROPDOWN ─────────────────────────────────────
+function buildFontDropdown() {
+  FONTS.forEach(f => {
+    const opt = document.createElement('div');
+    opt.className = 'font-option' + (f.family === state.settings.font ? ' active' : '');
+    opt.dataset.font = f.family;
+    opt.style.fontFamily = `'${f.family}', sans-serif`;
+    opt.textContent = f.label;
+    opt.addEventListener('click', () => selectFont(f.family));
+    D.fontMenu.appendChild(opt);
+  });
+  // Move menu to <body> so position:fixed escapes sidebar's CSS animation transform
+  // (CSS animations leave a computed transform that creates a new containing block)
+  document.body.appendChild(D.fontMenu);
+}
+
+function selectFont(family) {
+  state.settings.font = family;
+  const f = FONTS.find(x => x.family === family);
+  D.fontSelectedLabel.textContent = f ? f.label : family;
+  D.fontSelectedLabel.style.fontFamily = `'${family}', sans-serif`;
+  D.fontMenu.querySelectorAll('.font-option').forEach(o => {
+    o.classList.toggle('active', o.dataset.font === family);
+  });
+  closeFontDropdown();
+  onSettingsChange();
+}
+
+function openFontDropdown() {
+  // Portal: position menu using fixed coords from trigger's bounding rect
+  // so it escapes sidebar's scroll-container clipping
+  const rect = D.fontTrigger.getBoundingClientRect();
+  D.fontMenu.style.top   = (rect.bottom + 4) + 'px';
+  D.fontMenu.style.left  = rect.left + 'px';
+  D.fontMenu.style.width = rect.width + 'px';
+  D.fontMenu.classList.add('open');
+  D.fontTrigger.classList.add('open');
+}
+
+function toggleFontDropdown() {
+  if (D.fontMenu.classList.contains('open')) closeFontDropdown();
+  else openFontDropdown();
+}
+
+function closeFontDropdown() {
+  D.fontMenu.classList.remove('open');
+  D.fontTrigger.classList.remove('open');
+}
+
+// ── SYNC UI ← STATE ──────────────────────────────────
+function syncUIFromSettings() {
+  const s = state.settings;
+  D.wmText.value = s.text;
+
+  // Font
+  const f = FONTS.find(x => x.family === s.font) || FONTS[0];
+  D.fontSelectedLabel.textContent = f.label;
+  D.fontSelectedLabel.style.fontFamily = `'${f.family}', sans-serif`;
+  D.fontMenu.querySelectorAll('.font-option').forEach(o => {
+    o.classList.toggle('active', o.dataset.font === s.font);
+  });
+
+  D.wmSize.value = s.size;
+  D.wmSizeNum.value = s.size;
+
+  document.querySelectorAll('.toggle-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === s.scaleMode);
+  });
+
+  D.wmOpacity.value = s.opacity;
+  D.wmOpacityNum.value = s.opacity;
+
+  D.wmColor.value = s.color;
+  D.wmColorHex.value = s.color;
+
+  D.posGrid.querySelectorAll('.pos-cell').forEach(c => {
+    c.classList.toggle('active', c.dataset.pos === s.position);
+  });
+
+  D.offsetX.value = s.offsetX;
+  D.offsetY.value = s.offsetY;
+
+  D.padX.value = s.padX;
+  D.padXNum.value = s.padX;
+  D.padY.value = s.padY;
+  D.padYNum.value = s.padY;
+
+  D.wmRotation.value = s.rotation;
+  D.wmRotationNum.value = s.rotation;
+  updateRotationPresets(s.rotation);
+
+  D.exportPattern.value = state.exportSettings.pattern;
+  D.exportQuality.value = state.exportSettings.quality;
+  D.exportQualityNum.value = state.exportSettings.quality;
+}
+
+// ── PROFILES ──────────────────────────────────────────
+function loadProfiles() {
+  try {
+    state.profiles = JSON.parse(localStorage.getItem('bwp_profiles') || '[]');
+  } catch { state.profiles = []; }
+  renderProfileDropdown();
+  applyDefaultProfile();
+}
+
+function saveProfiles() {
+  localStorage.setItem('bwp_profiles', JSON.stringify(state.profiles));
+}
+
+function renderProfileDropdown() {
+  const sel = D.profileSelect;
+  sel.innerHTML = '<option value="">— Chọn profile —</option>';
+  state.profiles.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = (p.isDefault ? '★ ' : '') + p.name;
+    sel.appendChild(opt);
+  });
+  if (state.activeProfileName) sel.value = state.activeProfileName;
+}
+
+function applyDefaultProfile() {
+  const def = state.profiles.find(p => p.isDefault);
+  if (def) {
+    applyProfile(def);
+    state.activeProfileName = def.name;
+    D.profileSelect.value = def.name;
+    updateDefaultBtn(def.isDefault);
+  }
+}
+
+function applyProfile(profile) {
+  const s = state.settings;
+  s.text      = profile.text      ?? s.text;
+  s.font      = profile.font      ?? s.font;
+  s.size      = profile.size      ?? s.size;
+  s.scaleMode = profile.scaleMode ?? s.scaleMode;
+  s.opacity   = profile.opacity   ?? s.opacity;
+  s.color     = profile.color     ?? s.color;
+  s.position  = profile.position  ?? s.position;
+  s.padX      = profile.padX      ?? s.padX;
+  s.padY      = profile.padY      ?? s.padY;
+  s.offsetX   = profile.offsetX   ?? s.offsetX;
+  s.offsetY   = profile.offsetY   ?? s.offsetY;
+  s.rotation  = profile.rotation  ?? 0;
+
+  if (profile.exportPattern) state.exportSettings.pattern = profile.exportPattern;
+  if (profile.jpegQuality)   state.exportSettings.quality = profile.jpegQuality;
+
+  state.profileBaseSettings = JSON.parse(JSON.stringify(state.settings));
+  state.profileDirty = false;
+  D.btnUpdateProfile.classList.remove('visible');
+
+  syncUIFromSettings();
+  renderPreview();
+}
+
+function settingsToProfile(name, isDefault) {
+  return {
+    name,
+    isDefault: isDefault || false,
+    text:      state.settings.text,
+    font:      state.settings.font,
+    size:      state.settings.size,
+    scaleMode: state.settings.scaleMode,
+    opacity:   state.settings.opacity,
+    color:     state.settings.color,
+    position:  state.settings.position,
+    padX:      state.settings.padX,
+    padY:      state.settings.padY,
+    offsetX:   state.settings.offsetX,
+    offsetY:   state.settings.offsetY,
+    rotation:  state.settings.rotation,
+    exportPattern: state.exportSettings.pattern,
+    jpegQuality:   state.exportSettings.quality,
+  };
+}
+
+function markProfileDirty() {
+  if (!state.activeProfileName) return;
+  state.profileDirty = true;
+  D.btnUpdateProfile.classList.add('visible');
+}
+
+function updateDefaultBtn(isDefault) {
+  D.btnDefaultProfile.classList.toggle('active', isDefault);
+}
+
+function updateRotationPresets(deg) {
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.deg) === Number(deg));
+  });
+}
+
+// ── EXPORT ────────────────────────────────────────────
+function updateExportCount() {
+  D.exportCount.textContent = `(${state.images.length})`;
+}
+
+function updateImgCounter() {
+  D.imgCounter.textContent = `${state.images.length} ảnh`;
+}
+
+async function exportAll() {
+  if (state.images.length === 0) {
+    showToast('Không có ảnh để xuất!', 'error');
+    return;
+  }
+
+  D.progressOverlay.classList.add('active');
+  D.btnExport.disabled = true;
+
+  const zip = new JSZip();
+  const total = state.images.length;
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+  for (let i = 0; i < total; i++) {
+    const img = state.images[i];
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = img.bitmap.width;
+    canvas.height = img.bitmap.height;
+    applyWatermark(canvas, img.bitmap, state.settings);
+
+    const blob = await new Promise(res =>
+      canvas.toBlob(res, 'image/jpeg', state.exportSettings.quality / 100)
+    );
+
+    const pattern = state.exportSettings.pattern
+      .replace('{original}', img.name)
+      .replace('{date}', dateStr)
+      .replace('{index}', String(i + 1).padStart(3, '0'));
+
+    zip.file(pattern + '.jpg', blob);
+
+    // Update progress
+    const pct = Math.round(((i + 1) / total) * 100);
+    D.progressFill.style.width = pct + '%';
+    D.progressCount.textContent = `${i + 1} / ${total}`;
+    D.progressSubtitle.textContent = img.name + img.ext;
+
+    // Yield to browser every 5 images
+    if (i % 5 === 4) await new Promise(res => setTimeout(res, 0));
+  }
+
+  D.progressSubtitle.textContent = 'Đang nén file ZIP...';
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
+    D.progressFill.style.width = meta.percent.toFixed(0) + '%';
+  });
+
+  D.progressOverlay.classList.remove('active');
+  D.btnExport.disabled = false;
+  D.progressFill.style.width = '0%';
+
+  const url = URL.createObjectURL(zipBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `watermarked_${dateStr}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`✓ ${total} ảnh đã được xuất thành công!`, 'success');
+}
+
+// ── SHUTTER SOUND ─────────────────────────────────────
+function playShutterSound() {
+  if (!state.shutterSound) return;
+  try {
+    if (!state.audioCtx) {
+      state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = state.audioCtx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.12);
+  } catch (e) {}
+}
+
+// ── TOAST ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = 'info') {
+  clearTimeout(toastTimer);
+  D.toast.textContent = msg;
+  D.toast.className = 'show' + (type !== 'info' ? ' ' + type : '');
+  toastTimer = setTimeout(() => { D.toast.className = ''; }, 3800);
+}
+
+// ── RESET HELPERS ─────────────────────────────────────
+const GROUP_DEFAULTS = {
+  text:     { text: '' },
+  font:     { font: 'DM Mono' },
+  size:     { size: 5, scaleMode: 'longer' },
+  opacity:  { opacity: 70 },
+  color:    { color: '#ffffff' },
+  rotation: { rotation: 0 },
+  position: { position: 'br', offsetX: 0, offsetY: 0 },
+  padding:  { padX: 2, padY: 2 },
+};
+
+function resetGroup(group) {
+  const base = state.profileBaseSettings || DEFAULT_SETTINGS;
+  const keys = GROUP_DEFAULTS[group] ? Object.keys(GROUP_DEFAULTS[group]) : [];
+  keys.forEach(k => { state.settings[k] = base[k] ?? DEFAULT_SETTINGS[k]; });
+  syncUIFromSettings();
+  onSettingsChange();
+}
+
+// ── MODAL ─────────────────────────────────────────────
+let modalResolve;
+function openModal(defaultValue = '') {
+  D.modalInput.value = defaultValue;
+  D.modalOverlay.classList.add('active');
+  D.modalInput.focus();
+  return new Promise(res => { modalResolve = res; });
+}
+function closeModal(val) {
+  D.modalOverlay.classList.remove('active');
+  if (modalResolve) modalResolve(val);
+}
+
+// ── EVENT LISTENERS ───────────────────────────────────
+function setupEvents() {
+
+  // ─ File loading ─
+  D.fileInput.addEventListener('change', e => {
+    if (e.target.files.length > 0) loadFiles(e.target.files);
+  });
+  D.fileInputMore.addEventListener('change', e => {
+    if (e.target.files.length > 0) loadFiles(e.target.files);
+  });
+  D.btnAddMore.addEventListener('click', () => D.fileInputMore.click());
+
+  // ─ Drag & Drop ─
+  const setupDrop = (el, isOverlay) => {
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (isOverlay) D.dropZone.classList.add('drag-over');
+    });
+    el.addEventListener('dragleave', e => {
+      if (isOverlay && !D.dropZone.contains(e.relatedTarget)) {
+        D.dropZone.classList.remove('drag-over');
+      }
+    });
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      D.dropZone.classList.remove('drag-over');
+      const items = e.dataTransfer.items;
+      if (items) {
+        const filePromises = [];
+        const collected = [];
+        const traverseEntry = (entry) => {
+          if (entry.isFile) {
+            return new Promise(res => entry.file(f => { collected.push(f); res(); }));
+          } else if (entry.isDirectory) {
+            return new Promise(res => {
+              const reader = entry.createReader();
+              const readAll = () => {
+                reader.readEntries(async entries => {
+                  if (entries.length === 0) { res(); return; }
+                  await Promise.all(entries.map(traverseEntry));
+                  readAll();
+                });
+              };
+              readAll();
+            });
+          }
+          return Promise.resolve();
+        };
+        for (const item of items) {
+          if (item.kind === 'file') {
+            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+            if (entry) filePromises.push(traverseEntry(entry));
+            else { const f = item.getAsFile(); if (f) collected.push(f); }
+          }
+        }
+        Promise.all(filePromises).then(() => {
+          if (collected.length > 0) loadFiles(collected);
+        });
+      } else {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) loadFiles(files);
+      }
+    });
+  };
+  setupDrop(D.dropOverlay, true);
+  setupDrop(document.body, false);
+
+  // ─ View toggle ─
+  D.btnViewSingle.addEventListener('click', () => switchView('single'));
+  D.btnViewGrid.addEventListener('click', () => switchView('grid'));
+
+  // ─ Sound toggle ─
+  D.btnSound.addEventListener('click', () => {
+    state.shutterSound = !state.shutterSound;
+    D.soundIconOn.style.display  = state.shutterSound ? '' : 'none';
+    D.soundIconOff.style.display = state.shutterSound ? 'none' : '';
+    D.btnSound.classList.toggle('active', state.shutterSound);
+  });
+
+  // ─ Text ─
+  D.wmText.addEventListener('input', () => {
+    state.settings.text = D.wmText.value;
+    onSettingsChange();
+  });
+
+  // ─ Font dropdown ─
+  D.fontTrigger.addEventListener('click', e => { e.stopPropagation(); toggleFontDropdown(); });
+  document.addEventListener('click', () => closeFontDropdown());
+
+  // ─ Size ─
+  D.wmSize.addEventListener('input', () => {
+    const v = parseFloat(D.wmSize.value);
+    state.settings.size = v;
+    D.wmSizeNum.value = v;
+    onSettingsChange();
+  });
+  D.wmSizeNum.addEventListener('change', () => {
+    const v = Math.min(20, Math.max(1, parseFloat(D.wmSizeNum.value) || 5));
+    state.settings.size = v;
+    D.wmSize.value = v;
+    D.wmSizeNum.value = v;
+    onSettingsChange();
+  });
+
+  // ─ Scale mode ─
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.settings.scaleMode = btn.dataset.mode;
+      document.querySelectorAll('.toggle-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.mode === state.settings.scaleMode)
+      );
+      onSettingsChange();
+    });
+  });
+
+  // ─ Opacity ─
+  D.wmOpacity.addEventListener('input', () => {
+    const v = parseInt(D.wmOpacity.value);
+    state.settings.opacity = v;
+    D.wmOpacityNum.value = v;
+    onSettingsChange();
+  });
+  D.wmOpacityNum.addEventListener('change', () => {
+    const v = Math.min(100, Math.max(0, parseInt(D.wmOpacityNum.value) || 70));
+    state.settings.opacity = v;
+    D.wmOpacity.value = v;
+    D.wmOpacityNum.value = v;
+    onSettingsChange();
+  });
+
+  // ─ Color ─
+  D.wmColor.addEventListener('input', () => {
+    state.settings.color = D.wmColor.value;
+    D.wmColorHex.value = D.wmColor.value;
+    onSettingsChange();
+  });
+  D.wmColorHex.addEventListener('change', () => {
+    const v = D.wmColorHex.value.trim();
+    if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+      state.settings.color = v;
+      D.wmColor.value = v;
+      onSettingsChange();
+    }
+  });
+
+  // ─ Position grid ─
+  D.posGrid.querySelectorAll('.pos-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      state.settings.position = cell.dataset.pos;
+      D.posGrid.querySelectorAll('.pos-cell').forEach(c =>
+        c.classList.toggle('active', c.dataset.pos === cell.dataset.pos)
+      );
+      onSettingsChange();
+    });
+  });
+
+  // ─ Offsets ─
+  [D.offsetX, D.offsetY].forEach((inp, i) => {
+    inp.addEventListener('change', () => {
+      const v = parseInt(inp.value) || 0;
+      if (i === 0) state.settings.offsetX = v;
+      else         state.settings.offsetY = v;
+      onSettingsChange();
+    });
+  });
+
+  // ─ Rotation ─
+  D.wmRotation.addEventListener('input', () => {
+    const v = parseInt(D.wmRotation.value);
+    state.settings.rotation = v;
+    D.wmRotationNum.value = v;
+    updateRotationPresets(v);
+    onSettingsChange();
+  });
+  D.wmRotationNum.addEventListener('change', () => {
+    const v = Math.min(180, Math.max(-180, parseInt(D.wmRotationNum.value) || 0));
+    state.settings.rotation = v;
+    D.wmRotation.value = v;
+    D.wmRotationNum.value = v;
+    updateRotationPresets(v);
+    onSettingsChange();
+  });
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = parseInt(btn.dataset.deg);
+      state.settings.rotation = v;
+      D.wmRotation.value = v;
+      D.wmRotationNum.value = v;
+      updateRotationPresets(v);
+      onSettingsChange();
+    });
+  });
+
+  // ─ Padding ─
+  const syncPad = (slider, num, key) => {
+    slider.addEventListener('input', () => {
+      const v = parseFloat(slider.value);
+      state.settings[key] = v;
+      num.value = v;
+      onSettingsChange();
+    });
+    num.addEventListener('change', () => {
+      const v = Math.min(10, Math.max(0, parseFloat(num.value) || 2));
+      state.settings[key] = v;
+      slider.value = v;
+      num.value = v;
+      onSettingsChange();
+    });
+  };
+  syncPad(D.padX, D.padXNum, 'padX');
+  syncPad(D.padY, D.padYNum, 'padY');
+
+  // ─ Reset buttons ─
+  document.querySelectorAll('.reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => resetGroup(btn.dataset.group));
+  });
+
+  // ─ Export pattern ─
+  D.exportPattern.addEventListener('input', () => {
+    state.exportSettings.pattern = D.exportPattern.value;
+  });
+
+  // ─ Export quality ─
+  D.exportQuality.addEventListener('input', () => {
+    const v = parseInt(D.exportQuality.value);
+    state.exportSettings.quality = v;
+    D.exportQualityNum.value = v;
+  });
+  D.exportQualityNum.addEventListener('change', () => {
+    const v = Math.min(100, Math.max(60, parseInt(D.exportQualityNum.value) || 92));
+    state.exportSettings.quality = v;
+    D.exportQuality.value = v;
+    D.exportQualityNum.value = v;
+  });
+
+  // ─ Export button ─
+  D.btnExport.addEventListener('click', exportAll);
+
+  // ─ Profile select ─
+  D.profileSelect.addEventListener('change', () => {
+    const name = D.profileSelect.value;
+    if (!name) {
+      state.activeProfileName = null;
+      state.profileDirty = false;
+      D.btnUpdateProfile.classList.remove('visible');
+      updateDefaultBtn(false);
+      return;
+    }
+    const profile = state.profiles.find(p => p.name === name);
+    if (profile) {
+      state.activeProfileName = name;
+      applyProfile(profile);
+      updateDefaultBtn(profile.isDefault);
+    }
+  });
+
+  // ─ Save profile ─
+  D.btnSaveProfile.addEventListener('click', async () => {
+    const name = await openModal('');
+    if (!name) return;
+    if (state.profiles.find(p => p.name === name)) {
+      showToast('Tên profile đã tồn tại!', 'warning'); return;
+    }
+    const profile = settingsToProfile(name, false);
+    state.profiles.push(profile);
+    saveProfiles();
+    state.activeProfileName = name;
+    state.profileDirty = false;
+    D.btnUpdateProfile.classList.remove('visible');
+    renderProfileDropdown();
+    updateDefaultBtn(false);
+    playShutterSound();
+    showToast(`Profile "${name}" đã được lưu`, 'success');
+  });
+
+  // ─ Set default ─
+  D.btnDefaultProfile.addEventListener('click', () => {
+    if (!state.activeProfileName) { showToast('Vui lòng chọn profile trước', 'warning'); return; }
+    state.profiles.forEach(p => { p.isDefault = p.name === state.activeProfileName; });
+    saveProfiles();
+    renderProfileDropdown();
+    updateDefaultBtn(true);
+    playShutterSound();
+    showToast(`"${state.activeProfileName}" đã được đặt làm mặc định`, 'success');
+  });
+
+  // ─ Update profile ─
+  D.btnUpdateProfile.addEventListener('click', () => {
+    if (!state.activeProfileName) return;
+    const idx = state.profiles.findIndex(p => p.name === state.activeProfileName);
+    if (idx < 0) return;
+    const wasDefault = state.profiles[idx].isDefault;
+    state.profiles[idx] = settingsToProfile(state.activeProfileName, wasDefault);
+    saveProfiles();
+    state.profileDirty = false;
+    state.profileBaseSettings = JSON.parse(JSON.stringify(state.settings));
+    D.btnUpdateProfile.classList.remove('visible');
+    playShutterSound();
+    showToast(`Profile "${state.activeProfileName}" đã được cập nhật`, 'success');
+  });
+
+  // ─ Modal ─
+  D.modalCancel.addEventListener('click', () => closeModal(null));
+  D.modalConfirm.addEventListener('click', () => {
+    const v = D.modalInput.value.trim();
+    if (!v) { D.modalInput.focus(); return; }
+    closeModal(v);
+  });
+  D.modalInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { D.modalConfirm.click(); }
+    if (e.key === 'Escape') closeModal(null);
+  });
+  D.modalOverlay.addEventListener('click', e => {
+    if (e.target === D.modalOverlay) closeModal(null);
+  });
+
+  // ─ Resize → re-render ─
+  window.addEventListener('resize', () => {
+    if (state.viewMode === 'single') renderPreview();
+  });
+
+  // ─ Drop zone click ─
+  D.dropZone.addEventListener('click', e => {
+    if (e.target.closest('label')) return;
+    D.fileInput.click();
+  });
+}
+
+// ── FONT PRELOAD ──────────────────────────────────────
+async function preloadFonts() {
+  try {
+    await Promise.all(
+      FONTS.map(f => document.fonts.load(`${f.weight} 14px "${f.family}"`))
+    );
+  } catch (e) {}
+}
+
+// ── INIT ──────────────────────────────────────────────
+function init() {
+  buildFontDropdown();
+  loadProfiles();
+  setupEvents();
+  preloadFonts();
+
+  // Initial state: hide update btn
+  D.btnUpdateProfile.classList.remove('visible');
+
+  // Show app shell hidden initially
+  // Make drop overlay visible (already is by default)
+}
+
+init();
+</script>
+</body>
+</html>
