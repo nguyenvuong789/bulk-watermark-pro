@@ -1874,12 +1874,17 @@ function addThumbnail(index) {
   thumb.dataset.index = index;
 
   const THUMB_H = 100;
-  const scale = THUMB_H / img.bitmap.height;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const scale = (THUMB_H * dpr) / img.bitmap.height;
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(img.bitmap.width * scale);
-  canvas.height = THUMB_H;
+  canvas.width  = Math.round(img.bitmap.width * scale);
+  canvas.height = Math.round(THUMB_H * dpr);
+  canvas.style.height = THUMB_H + 'px';
+  canvas.style.width  = Math.round(img.bitmap.width * (THUMB_H / img.bitmap.height)) + 'px';
 
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img.bitmap, 0, 0, canvas.width, canvas.height);
 
   const check = document.createElement('span');
