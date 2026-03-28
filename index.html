@@ -1920,12 +1920,17 @@ function renderPreview() {
   const canvas = D.previewCanvas;
   const wrapper = D.canvasWrapper;
 
+  const dpr = window.devicePixelRatio || 1;
   const cW = wrapper.clientWidth - 32;
   const cH = wrapper.clientHeight - 32;
   const scale = Math.min(cW / img.bitmap.width, cH / img.bitmap.height, 1);
 
-  canvas.width  = Math.round(img.bitmap.width  * scale);
-  canvas.height = Math.round(img.bitmap.height * scale);
+  const cssW = Math.round(img.bitmap.width  * scale);
+  const cssH = Math.round(img.bitmap.height * scale);
+  canvas.width  = cssW * dpr;
+  canvas.height = cssH * dpr;
+  canvas.style.width  = cssW + 'px';
+  canvas.style.height = cssH + 'px';
 
   applyWatermark(canvas, img.bitmap, state.settings);
 
@@ -1942,10 +1947,14 @@ function renderGridView() {
     const cell = document.createElement('div');
     cell.className = 'grid-cell';
 
+    const dpr = window.devicePixelRatio || 1;
     const scale = CELL_W / img.bitmap.width;
+    const cssH = Math.round(img.bitmap.height * scale);
     const canvas = document.createElement('canvas');
-    canvas.width = CELL_W;
-    canvas.height = Math.round(img.bitmap.height * scale);
+    canvas.width  = CELL_W * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.width  = CELL_W + 'px';
+    canvas.style.height = cssH + 'px';
 
     applyWatermark(canvas, img.bitmap, state.settings);
 
